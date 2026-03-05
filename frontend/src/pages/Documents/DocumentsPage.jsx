@@ -123,7 +123,11 @@ function UploadDialog({ open, onClose, onSaved, editDoc, narrativePages }) {
       }
       onClose()
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Error al guardar el documento.')
+      const detail = err?.response?.data?.detail
+      const msg = Array.isArray(detail)
+        ? detail.map((d) => d.msg || d.message || JSON.stringify(d)).join(', ')
+        : (typeof detail === 'string' ? detail : 'Error al guardar el documento.')
+      setError(msg)
     } finally {
       setSaving(false)
     }

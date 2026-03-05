@@ -2,7 +2,6 @@ import axios from 'axios'
 
 const api = axios.create({
   baseURL: '/api/v1',
-  headers: { 'Content-Type': 'application/json' },
 })
 
 // Attach access token to every request
