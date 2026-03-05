@@ -1,0 +1,61 @@
+# Proyecto RyD
+# ============
+
+# Bases de datos 
+*.db
+*.sqlite
+*.sqlite3
+portal.db
+backend/portal.db
+
+# Archivos de entorno y variables secretas
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env
+
+# Node.js y Frontend (Vite + React)
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python y Backend
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+backend/__pycache__/
+backend/venv/
+backend/env/
+backend/.venv/
+backend/instance/
+
+# Archivos subidos por los usuarios (Imágenes, etc)
+backend/uploads/
+uploads/
+
+# Archivos del Sistema Operativo
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Entornos de desarrollo / IDEs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Archivos temporales o extraños generados
+nul
+backend/nul
+frontend/nul
+*.bak
+*.tmp
