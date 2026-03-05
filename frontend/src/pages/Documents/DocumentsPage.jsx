@@ -123,6 +123,7 @@ function UploadDialog({ open, onClose, onSaved, editDoc, narrativePages }) {
       }
       onClose()
     } catch (err) {
+      console.error('[DocumentsPage] upload error:', err?.response?.status, err?.response?.data, err)
       const detail = err?.response?.data?.detail
       const msg = Array.isArray(detail)
         ? detail.map((d) => d.msg || d.message || JSON.stringify(d)).join(', ')
