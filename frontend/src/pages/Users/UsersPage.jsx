@@ -41,6 +41,7 @@ import InputAdornment from '@mui/material/InputAdornment'
 
 import { usersService, rolesService } from '../../services/usersService'
 import { usePermissions } from '../../hooks/usePermissions'
+import { getErrorMessage } from '../../utils/apiUtils'
 
 const DRAWER_WIDTH = 420
 
@@ -155,7 +156,7 @@ export default function UsersPage() {
       closeDrawer()
       loadData()
     } catch (err) {
-      notify(err?.response?.data?.detail || 'Error al guardar', 'error')
+      notify(getErrorMessage(err, 'Error al guardar'), 'error')
     } finally {
       setSaving(false)
     }
@@ -168,7 +169,7 @@ export default function UsersPage() {
       setConfirmDelete(null)
       loadData()
     } catch (err) {
-      notify(err?.response?.data?.detail || 'Error al eliminar', 'error')
+      notify(getErrorMessage(err, 'Error al eliminar'), 'error')
     }
   }
 

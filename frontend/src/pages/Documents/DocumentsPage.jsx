@@ -32,6 +32,7 @@ import {
 } from '@mui/icons-material'
 import { documentsService } from '../../services/documentsService'
 import { pagesService } from '../../services/pagesService'
+import { getErrorMessage } from '../../utils/apiUtils'
 
 function formatSize(bytes) {
   if (!bytes) return ''
@@ -123,7 +124,7 @@ function UploadDialog({ open, onClose, onSaved, editDoc, narrativePages }) {
       }
       onClose()
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Error al guardar el documento.')
+      setError(getErrorMessage(err, 'Error al guardar el documento.'))
     } finally {
       setSaving(false)
     }
@@ -201,12 +202,12 @@ function UploadDialog({ open, onClose, onSaved, editDoc, narrativePages }) {
           minRows={2}
         />
 
-        {/* Associate with a narrative page */}
+        {/* Associate with a Document page */}
         <FormControl fullWidth size="small">
-          <InputLabel>Asociar a página narrativa (opcional)</InputLabel>
+          <InputLabel>Asociar a página tipo Documento (opcional)</InputLabel>
           <Select
             value={pageId}
-            label="Asociar a página narrativa (opcional)"
+            label="Asociar a página tipo Documento (opcional)"
             onChange={(e) => setPageId(e.target.value)}
           >
             <MenuItem value=""><em>Sin página</em></MenuItem>
@@ -366,7 +367,7 @@ export default function DocumentsPage() {
         const all = flattenPages(pagesRes.data || [])
         setNarrativePages(all.filter((p) => p.page_type === 'narrative'))
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false))
   }, [])
 
@@ -405,7 +406,7 @@ export default function DocumentsPage() {
             GESTIÓN DE DOCUMENTOS
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Sube y administra los PDFs asociados a las páginas narrativas del portal.
+            Sube y administra los PDFs asociados a las páginas de tipo Documento del portal.
           </Typography>
         </Box>
         <Button
@@ -433,7 +434,7 @@ export default function DocumentsPage() {
             <PdfIcon sx={{ fontSize: 64, opacity: 0.2 }} />
             <Typography variant="h6" fontWeight={600}>Sin documentos</Typography>
             <Typography variant="body2" textAlign="center" maxWidth={320}>
-              Sube tu primer PDF para asociarlo a una página narrativa del portal.
+              Sube tu primer PDF para asociarlo a una página de tipo Documento del portal.
             </Typography>
             <Button variant="outlined" startIcon={<UploadIcon />} onClick={() => setUploadOpen(true)}>
               Subir primer PDF

@@ -212,7 +212,7 @@ export default function AppLayout() {
               <DashboardIcon sx={{ color: '#fff', fontSize: 20 }} />
             </Box>
             <Typography variant="subtitle1" fontWeight={700} noWrap>
-              Portal Inmobiliario
+              Research & Development
             </Typography>
           </Box>
 

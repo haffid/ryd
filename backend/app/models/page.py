@@ -10,6 +10,7 @@ class PageType(str, enum.Enum):
     dashboard = "dashboard"
     narrative = "narrative"
     external = "external"
+    folder = "folder"
 
 
 class PageVisibility(str, enum.Enum):

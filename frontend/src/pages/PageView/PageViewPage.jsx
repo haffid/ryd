@@ -27,6 +27,8 @@ import {
   Link as LinkIcon,
   PictureAsPdf as PdfIcon,
   Upload as UploadIcon,
+  Folder as FolderIcon,
+  Dashboard as DashboardIcon,
 } from '@mui/icons-material'
 import { pagesService } from '../../services/pagesService'
 import { insightsService } from '../../services/insightsService'
@@ -72,10 +74,9 @@ function InsightsPanel({ insights, loading, onOpenEditor, selected, onSelect }) 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <LightbulbIcon color="primary" fontSize="small" />
           <Typography variant="caption" fontWeight={700} letterSpacing={1} textTransform="uppercase">
-            Insights Estratégicos
+            INSIGHTS
           </Typography>
         </Box>
-        <Chip label="EN VIVO" size="small" color="primary" sx={{ fontSize: 10, height: 20 }} />
       </Box>
 
       {loading ? (
@@ -119,37 +120,44 @@ function InsightsPanel({ insights, loading, onOpenEditor, selected, onSelect }) 
               <Box>
                 <Typography variant="subtitle2" fontWeight={700} gutterBottom>{selected.title}</Typography>
                 <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <PersonIcon sx={{ fontSize: 13, color: 'text.disabled' }} />
-                    <Typography variant="caption" color="text.secondary">{selected.author_name}</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <CalendarIcon sx={{ fontSize: 13, color: 'text.disabled' }} />
-                    <Typography variant="caption" color="text.secondary">
-                      {formatDate(selected.published_at || selected.created_at)}
-                    </Typography>
-                  </Box>
+                  <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+                    Publicado el {formatDate(selected.published_at)} por {selected.author_name}
+                  </Typography>
                 </Box>
+                <Divider />
+                {selected.content && (
+                  <Box
+                    className="insight-content"
+                    dangerouslySetInnerHTML={{ __html: selected.content }}
+                    sx={{
+                      mb: selected.powerbi_url ? 4 : 0,
+                      color: 'text.primary',
+                      fontSize: 15,
+                      lineHeight: 1.7,
+                      '& p': { mb: 2, mt: 0 },
+                      '& ul, & ol': { mb: 2, pl: 3 },
+                      '& h1, & h2, & h3': { mt: 3, mb: 1.5, fontWeight: 700 },
+                      '& h1': { fontSize: '1.5rem' },
+                      '& h2': { fontSize: '1.25rem' },
+                      '& h3': { fontSize: '1.1rem' },
+                      '& img': { maxWidth: '100%', height: 'auto', borderRadius: 1, my: 2 },
+                      '& a': { color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }
+                    }}
+                  />
+                )}
               </Box>
-              <Divider />
-              {selected.content ? (
-                <Typography variant="body2" color="text.secondary" lineHeight={1.8} sx={{ whiteSpace: 'pre-wrap' }}>
-                  {selected.content}
-                </Typography>
-              ) : (
-                <Typography variant="body2" color="text.disabled" fontStyle="italic">Sin contenido narrativo.</Typography>
-              )}
+            </Box>
+          )}
+
+          {onOpenEditor && insights.length > 0 && (
+            <Box sx={{ p: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+              <Button fullWidth size="small" variant="outlined" endIcon={<OpenInNewIcon fontSize="small" />}
+                onClick={onOpenEditor} sx={{ fontSize: 12 }}>
+                Ver todos los insights
+              </Button>
             </Box>
           )}
         </>
-      )}
-      {onOpenEditor && insights.length > 0 && (
-        <Box sx={{ p: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Button fullWidth size="small" variant="outlined" endIcon={<OpenInNewIcon fontSize="small" />}
-            onClick={onOpenEditor} sx={{ fontSize: 12 }}>
-            Ver todos los insights
-          </Button>
-        </Box>
       )}
     </Paper>
   )
@@ -201,7 +209,7 @@ function EditUrlDialog({ open, onClose, page, onSaved }) {
 }
 
 /* ---------- Narrative layout (PDF viewer) ---------- */
-function NarrativeView({ currentPage, canWrite, navigate }) {
+function NarrativeView({ currentPage, children, hasChildren, activeChildIdx, setActiveChildIdx, canWrite, navigate, isSubView }) {
   const [document, setDocument] = useState(null)
   const [loadingDoc, setLoadingDoc] = useState(true)
   const [uploadOpen, setUploadOpen] = useState(false)
@@ -212,21 +220,23 @@ function NarrativeView({ currentPage, canWrite, navigate }) {
   const [saving, setSaving] = useState(false)
   const fileInputRef = useState(null)
 
+  const targetPage = hasChildren ? children[activeChildIdx] : currentPage
+
   useEffect(() => {
     setLoadingDoc(true)
-    documentsService.getByPage(currentPage.id)
+    documentsService.getByPage(targetPage.id)
       .then((res) => setDocument(res.data))
       .catch(() => setDocument(null))
       .finally(() => setLoadingDoc(false))
-  }, [currentPage.id])
+  }, [targetPage.id])
 
   useEffect(() => {
     if (uploadOpen) {
-      setTitle(document?.title || currentPage.name)
-      setDescription(document?.description || currentPage.description || '')
+      setTitle(document?.title || targetPage.name)
+      setDescription(document?.description || targetPage.description || '')
       setFile(null)
     }
-  }, [uploadOpen, document, currentPage])
+  }, [uploadOpen, document, targetPage])
 
   const handleDrop = (e) => {
     e.preventDefault()
@@ -240,9 +250,9 @@ function NarrativeView({ currentPage, canWrite, navigate }) {
     setSaving(true)
     try {
       const fd = new FormData()
-      fd.append('title', title.trim() || currentPage.name)
+      fd.append('title', title.trim() || targetPage.name)
       fd.append('description', description.trim())
-      fd.append('page_id', String(currentPage.id))
+      fd.append('page_id', String(targetPage.id))
       if (file) fd.append('file', file)
 
       let res
@@ -268,35 +278,59 @@ function NarrativeView({ currentPage, canWrite, navigate }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
       {/* Subheader */}
-      <Box sx={{ bgcolor: 'background.paper', px: { xs: 2, md: 4 }, py: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
-          <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-              <PdfIcon color="error" fontSize="small" />
-              <Typography variant="overline" color="primary" fontWeight={700} letterSpacing={3}>
-                {currentPage.name.toUpperCase()}
-              </Typography>
+      {!isSubView && (
+        <Box sx={{ bgcolor: 'background.paper', px: { xs: 2, md: 4 }, py: 2.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, alignItems: { lg: 'center' }, justifyContent: 'space-between', gap: 2 }}>
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                <PdfIcon color="error" fontSize="small" />
+                <Typography variant="overline" color="primary" fontWeight={700} letterSpacing={3}>
+                  {currentPage.name.toUpperCase()}
+                </Typography>
+              </Box>
+              {currentPage.description && (
+                <Typography variant="body1" color="text.secondary" maxWidth={700}>
+                  {currentPage.description}
+                </Typography>
+              )}
             </Box>
-            {currentPage.description && (
-              <Typography variant="body1" color="text.secondary" maxWidth={700}>
-                {currentPage.description}
-              </Typography>
+
+            {hasChildren && (
+              <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'action.hover', borderRadius: 2, p: 0.5, gap: 0.5, flexWrap: 'wrap' }}>
+                {children.map((child, i) => (
+                  <Box key={child.id} sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Button
+                      size="small"
+                      variant={activeChildIdx === i ? 'contained' : 'text'}
+                      onClick={() => setActiveChildIdx(i)}
+                      sx={{
+                        fontSize: 13, px: 2, py: 0.75, minWidth: 0,
+                        borderRadius: 1.5,
+                        color: activeChildIdx === i ? 'white' : 'text.secondary',
+                        boxShadow: activeChildIdx === i ? 2 : 0,
+                      }}
+                    >
+                      {child.name}
+                    </Button>
+                  </Box>
+                ))}
+              </Box>
+            )}
+            {canWrite && (
+              <Tooltip title={document ? 'Actualizar documento' : 'Subir PDF'}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<UploadIcon />}
+                  onClick={() => setUploadOpen(true)}
+                >
+                  {document ? 'Actualizar PDF' : 'Subir PDF'}
+                </Button>
+              </Tooltip>
             )}
           </Box>
-          {canWrite && (
-            <Tooltip title={document ? 'Actualizar documento' : 'Subir PDF'}>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<UploadIcon />}
-                onClick={() => setUploadOpen(true)}
-              >
-                {document ? 'Actualizar PDF' : 'Subir PDF'}
-              </Button>
-            </Tooltip>
-          )}
         </Box>
-      </Box>
+      )}
 
       {/* PDF viewer — full width */}
       <Box sx={{ flex: 1, p: { xs: 1, md: 2 }, bgcolor: 'background.default', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -325,7 +359,7 @@ function NarrativeView({ currentPage, canWrite, navigate }) {
             <Box
               component="iframe"
               src={pdfUrl}
-              title={currentPage.name}
+              title={targetPage.name}
               sx={{ flex: 1, border: 'none', width: '100%', minHeight: 500 }}
             />
           </Paper>
@@ -341,7 +375,7 @@ function NarrativeView({ currentPage, canWrite, navigate }) {
             <Typography variant="h6" fontWeight={600}>Sin documento</Typography>
             <Typography variant="body2" textAlign="center" maxWidth={320}>
               {canWrite
-                ? 'Sube un PDF para esta página usando el botón "Subir PDF" en la parte superior.'
+                ? `Sube un PDF para "${targetPage.name}" usando el botón "Subir PDF" en la parte superior.`
                 : 'El documento aún no ha sido configurado.'}
             </Typography>
             {canWrite && (
@@ -422,6 +456,37 @@ function NarrativeView({ currentPage, canWrite, navigate }) {
   )
 }
 
+/* ---------- Dashboard layout (Power BI + Insights) ---------- */
+function DashboardView({ targetPage, currentPage, powerbiUrl, insights, loadingInsights, selectedInsight, setSelectedInsight, canWrite, navigate }) {
+  return (
+    <Box sx={{ flex: 1, p: { xs: 2, md: 3 }, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, overflow: 'hidden', bgcolor: 'background.default' }}>
+      <Box sx={{ width: { md: '30%' }, minWidth: { md: 280 }, order: { xs: 1, md: 0 } }}>
+        <InsightsPanel
+          insights={insights} loading={loadingInsights}
+          onOpenEditor={canWrite ? () => navigate('/insights') : null}
+          selected={selectedInsight} onSelect={setSelectedInsight}
+        />
+      </Box>
+      <Box sx={{ flex: 1, display: 'flex', order: { xs: 2, md: 1 }, minHeight: { xs: 400, md: 0 } }}>
+        <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          {powerbiUrl ? (
+            <Box component="iframe" src={powerbiUrl} title={targetPage?.name || currentPage.name}
+              sx={{ flex: 1, border: 'none', width: '100%', minHeight: 400 }} allowFullScreen />
+          ) : (
+            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 1.5, minHeight: 400, color: 'text.disabled', bgcolor: 'action.hover' }}>
+              <TrendingUpIcon sx={{ fontSize: 64, opacity: 0.2 }} />
+              <Typography variant="h6" fontWeight={600}>Tablero Power BI</Typography>
+              <Typography variant="body2" textAlign="center" maxWidth={320}>
+                {canWrite ? `Configure la URL de Power BI usando el botón ✏ junto a "${targetPage?.name || currentPage.name}".` : 'El tablero aún no está configurado.'}
+              </Typography>
+            </Box>
+          )}
+        </Paper>
+      </Box>
+    </Box>
+  )
+}
+
 /* ---------- Main Page ---------- */
 export default function PageViewPage() {
   const { slug } = useParams()
@@ -448,26 +513,29 @@ export default function PageViewPage() {
   }, [slug])
 
   const allPages = flattenPages(pageTree)
-  const currentPage = allPages.find((p) => p.slug === slug)
+  const currentPage = allPages.find((p) => p.slug?.toLowerCase() === (slug || '').toLowerCase())
   const children = (currentPage?.children || []).filter((c) => c.visibility === 'published')
   const hasChildren = children.length > 0
   const activeChild = hasChildren ? children[activeChildIdx] : null
-  const baseUrl = activeChild?.powerbi_url || currentPage?.powerbi_url || null
+  const targetPage = activeChild || currentPage
+
+  const baseUrl = targetPage?.powerbi_url || currentPage?.powerbi_url || null
   const powerbiUrl = selectedInsight?.powerbi_url || baseUrl
 
   useEffect(() => {
+    if (!targetPage?.id) return
     setLoadingInsights(true)
     insightsService
-      .list({ status: 'published', limit: 10 })
+      .list({ page_id: targetPage.id, status: 'published', limit: 10 })
       .then((res) => setInsights(res.data || []))
       .catch(() => setInsights([]))
       .finally(() => setLoadingInsights(false))
-  }, [slug, activeChildIdx])
+  }, [targetPage])
 
   const canWrite = can('pages', 'write')
 
   const handlePageSaved = () => {
-    pagesService.list().then((res) => setPageTree(res.data || [])).catch(() => {})
+    pagesService.list().then((res) => setPageTree(res.data || [])).catch(() => { })
   }
 
   if (loadingPages) {
@@ -490,21 +558,22 @@ export default function PageViewPage() {
     )
   }
 
-  // ── NARRATIVE: full-width PDF viewer, no Power BI, no insights panel ──
-  if (currentPage.page_type === 'narrative') {
-    return <NarrativeView currentPage={currentPage} canWrite={canWrite} navigate={navigate} />
-  }
+  const pageIcon = targetPage?.page_type === 'narrative' ? <PdfIcon color="error" fontSize="small" />
+    : targetPage?.page_type === 'folder' ? <FolderIcon color="primary" fontSize="small" />
+      : <DashboardIcon color="primary" fontSize="small" />
 
-  // ── DASHBOARD: Power BI + insights panel ─────────────────────────────────
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-      {/* Subheader */}
+      {/* Shared Subheader for ALL page types */}
       <Box sx={{ bgcolor: 'background.paper', px: { xs: 2, md: 4 }, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, alignItems: { lg: 'center' }, justifyContent: 'space-between', gap: 2 }}>
           <Box>
-            <Typography variant="overline" color="primary" fontWeight={700} letterSpacing={3} display="block">
-              {currentPage.name.toUpperCase()}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+              {pageIcon}
+              <Typography variant="overline" color="primary" fontWeight={700} letterSpacing={3} display="block">
+                {currentPage.name.toUpperCase()}
+              </Typography>
+            </Box>
             {currentPage.description && (
               <Typography variant="body2" color="text.secondary">{currentPage.description}</Typography>
             )}
@@ -540,9 +609,10 @@ export default function PageViewPage() {
             </Box>
           )}
 
-          {!hasChildren && canWrite && (
-            <Tooltip title="Configurar URL de Power BI">
+          {!hasChildren && canWrite && targetPage.page_type !== 'folder' && (
+            <Tooltip title={targetPage.page_type === 'narrative' ? 'Los documentos se suben desde la vista' : 'Configurar URL de Power BI'}>
               <IconButton size="small" onClick={() => { setEditTarget(currentPage); setEditOpen(true) }}
+                disabled={targetPage.page_type === 'narrative'}
                 sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
                 <EditIcon fontSize="small" />
               </IconButton>
@@ -551,32 +621,43 @@ export default function PageViewPage() {
         </Box>
       </Box>
 
-      {/* Content */}
-      <Box sx={{ flex: 1, p: { xs: 2, md: 3 }, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, overflow: 'hidden', bgcolor: 'background.default' }}>
-        <Box sx={{ width: { md: '30%' }, minWidth: { md: 280 }, order: { xs: 1, md: 0 } }}>
-          <InsightsPanel
-            insights={insights} loading={loadingInsights}
-            onOpenEditor={can('insights', 'write') ? () => navigate('/insights') : null}
-            selected={selectedInsight} onSelect={setSelectedInsight}
-          />
+      {/* Dynamic Content Body based on Active Page Type */}
+      {targetPage.page_type === 'narrative' ? (
+        <NarrativeView
+          currentPage={currentPage}
+          children={children}
+          hasChildren={hasChildren}
+          activeChildIdx={activeChildIdx}
+          setActiveChildIdx={setActiveChildIdx}
+          canWrite={canWrite}
+          navigate={navigate}
+          isSubView={true}
+        />
+      ) : targetPage.page_type === 'folder' ? (
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default', p: 4 }}>
+          <FolderIcon sx={{ fontSize: 84, color: 'text.disabled', opacity: 0.3, mb: 2 }} />
+          <Typography variant="h5" color="text.secondary" fontWeight={600} gutterBottom>
+            Carpeta de Contenidos
+          </Typography>
+          <Typography variant="body1" color="text.disabled" textAlign="center" maxWidth={400}>
+            {!hasChildren
+              ? 'Esta carpeta no tiene submenús asignados aún. Dirígete a "Estructura" para agregarle páginas.'
+              : 'Selecciona una de las pestañas en la parte superior para visualizar su contenido.'}
+          </Typography>
         </Box>
-        <Box sx={{ flex: 1, display: 'flex', order: { xs: 2, md: 1 }, minHeight: { xs: 400, md: 0 } }}>
-          <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            {powerbiUrl ? (
-              <Box component="iframe" src={powerbiUrl} title={activeChild?.name || currentPage.name}
-                sx={{ flex: 1, border: 'none', width: '100%', minHeight: 400 }} allowFullScreen />
-            ) : (
-              <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 1.5, minHeight: 400, color: 'text.disabled', bgcolor: 'action.hover' }}>
-                <TrendingUpIcon sx={{ fontSize: 64, opacity: 0.2 }} />
-                <Typography variant="h6" fontWeight={600}>Tablero Power BI</Typography>
-                <Typography variant="body2" textAlign="center" maxWidth={320}>
-                  {canWrite ? `Configure la URL de Power BI usando el botón ✏ junto a "${activeChild?.name || currentPage.name}".` : 'El tablero aún no está configurado.'}
-                </Typography>
-              </Box>
-            )}
-          </Paper>
-        </Box>
-      </Box>
+      ) : (
+        <DashboardView
+          targetPage={targetPage}
+          currentPage={currentPage}
+          powerbiUrl={powerbiUrl}
+          insights={insights}
+          loadingInsights={loadingInsights}
+          selectedInsight={selectedInsight}
+          setSelectedInsight={setSelectedInsight}
+          canWrite={canWrite}
+          navigate={navigate}
+        />
+      )}
 
       <EditUrlDialog open={editOpen} onClose={() => setEditOpen(false)} page={editTarget} onSaved={handlePageSaved} />
     </Box>

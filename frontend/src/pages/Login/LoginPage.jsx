@@ -41,7 +41,7 @@ export default function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = location.state?.from?.pathname || '/dashboard'
+  const from = location.state?.from?.pathname || '/p/inicio'
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -123,14 +123,14 @@ export default function LoginPage() {
               </svg>
             </Box>
             <Typography variant="h6" fontWeight={700}>
-              Portal Inmobiliario
+              Research & Development
             </Typography>
           </Box>
           <Typography variant="h4" fontWeight={800} gutterBottom>
             Iniciar Sesión
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Bienvenido de nuevo. Por favor ingrese sus detalles.
+            Ingresa con tu Usuario y Contraseña.
           </Typography>
         </Box>
 
@@ -253,7 +253,7 @@ export default function LoginPage() {
         {/* Footer */}
         <Box sx={{ textAlign: 'center', mt: 4 }}>
           <Typography variant="caption" color="text.disabled">
-            © {new Date().getFullYear()} Portal Corporativo. Todos los derechos reservados.
+            © {new Date().getFullYear()} Portal RyD. Todos los derechos reservados.
           </Typography>
         </Box>
       </Box>

@@ -1,0 +1,4 @@
+(1, 'Inicio', 'inicio', 'dashboard', 'published', None)
+(2, 'Mercado', 'mercado', 'dashboard', 'published', 1)
+(5, 'Dynamic FIT', 'dfs', 'folder', 'published', None)
+(6, 'Lima', 'lima', 'narrative', 'published', 5)

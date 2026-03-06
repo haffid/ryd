@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
@@ -31,7 +32,7 @@ def _build(doc: Document, base_url: str) -> DocumentResponse:
         page_id=doc.page_id,
         page_name=doc.page.name if doc.page else None,
         uploaded_by_name=doc.uploaded_by.full_name if doc.uploaded_by else None,
-        created_at=doc.created_at,
+        created_at=doc.created_at or datetime.utcnow(),
     )
 
 
@@ -122,6 +123,10 @@ async def upload_document(
     db.add(doc)
     db.commit()
     db.refresh(doc)
+    
+    # Refresh again after commit to ensure all database-generated fields (like created_at) are present
+    doc = db.get(Document, doc.id)
+    
     return _build(doc, _base(request))
 
 

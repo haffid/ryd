@@ -29,7 +29,7 @@ export default function AppRouter() {
           </PrivateRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route index element={<Navigate to="/p/inicio" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         {/* Dynamic page view — driven by pages from Estructura */}
         <Route path="/p/:slug" element={<PageViewPage />} />

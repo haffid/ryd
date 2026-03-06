@@ -33,6 +33,7 @@ def _build(insight: Insight) -> InsightResponse:
 @router.get("/", response_model=List[InsightResponse])
 def list_insights(
     category_id: Optional[int] = Query(None),
+    page_id: Optional[int] = Query(None),
     filter_status: Optional[InsightStatus] = Query(None, alias="status"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
@@ -42,6 +43,8 @@ def list_insights(
     q = db.query(Insight)
     if category_id is not None:
         q = q.filter(Insight.category_id == category_id)
+    if page_id is not None:
+        q = q.filter(Insight.page_id == page_id)
     if filter_status is not None:
         q = q.filter(Insight.status == filter_status)
     insights = q.order_by(Insight.created_at.desc()).offset(skip).limit(limit).all()

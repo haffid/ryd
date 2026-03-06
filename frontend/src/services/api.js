@@ -9,6 +9,12 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
+
+  if (config.data instanceof FormData) {
+    // Let browser set the multipart/form-data header with the correct boundary
+    delete config.headers['Content-Type']
+  }
+
   return config
 })
 

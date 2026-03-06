@@ -74,10 +74,9 @@ function InsightsPanel({ insights, loading, categoryName, onOpenEditor, selected
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <LightbulbIcon color="primary" fontSize="small" />
           <Typography variant="caption" fontWeight={700} letterSpacing={1} textTransform="uppercase">
-            Insights Estratégicos
+            INSIGHTS
           </Typography>
         </Box>
-        <Chip label="EN VIVO" size="small" color="primary" sx={{ fontSize: 10, height: 20 }} />
       </Box>
 
       {/* Insight list (sidebar within panel) */}
@@ -338,7 +337,7 @@ export default function DashboardPage() {
     categoriesService
       .list()
       .then((res) => setCategories(res.data))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoadingMeta(false))
   }, [])
 
@@ -362,8 +361,8 @@ export default function DashboardPage() {
   const displayCategories = loadingMeta
     ? ['Cargando...']
     : categories.length
-    ? categories.map((c) => c.name)
-    : ['Sin categorías']
+      ? categories.map((c) => c.name)
+      : ['Sin categorías']
 
   const canEditCategories = can('categories', 'write')
 

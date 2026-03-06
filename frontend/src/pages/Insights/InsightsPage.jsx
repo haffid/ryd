@@ -32,12 +32,27 @@ import PublishIcon from '@mui/icons-material/Publish'
 import UnpublishedIcon from '@mui/icons-material/Unpublished'
 import ArticleIcon from '@mui/icons-material/Article'
 
+import ReactQuill from 'react-quill'
+import 'react-quill/dist/quill.snow.css'
+
 import { insightsService, categoriesService } from '../../services/insightsService'
 import { pagesService } from '../../services/pagesService'
 import { usePermissions } from '../../hooks/usePermissions'
 
 const STATUS_LABELS = { draft: 'Borrador', published: 'Publicado' }
 const STATUS_COLORS = { draft: 'warning', published: 'success' }
+
+const QUILL_MODULES = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'color': [] }, { 'background': [] }],
+    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+    [{ 'align': [] }],
+    ['link', 'image'],
+    ['clean']
+  ],
+}
 
 const EMPTY_FORM = {
   title: '',
@@ -476,23 +491,47 @@ export default function InsightsPage() {
                   helperText="Si se proporciona, se mostrara un iframe con el reporte"
                 />
 
-                <TextField
-                  label="Contenido"
-                  fullWidth
-                  multiline
-                  minRows={14}
-                  value={form.content}
-                  onChange={handleChange('content')}
-                  disabled={!canWrite}
-                  placeholder="Redacte el contenido del insight aqui."
-                  sx={{
-                    '& .MuiInputBase-root': {
-                      fontFamily: 'inherit',
-                      fontSize: 15,
-                      lineHeight: 1.7,
-                    },
-                  }}
-                />
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <Typography variant="caption" color="text.secondary" mb={0.5}>
+                    Contenido
+                  </Typography>
+                  <Box
+                    sx={{
+                      '& .quill': {
+                        display: 'flex',
+                        flexDirection: 'column',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        overflow: 'hidden'
+                      },
+                      '& .ql-toolbar': {
+                        border: 'none',
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        bgcolor: 'action.hover'
+                      },
+                      '& .ql-container': {
+                        border: 'none',
+                        minHeight: 300,
+                        fontSize: 15,
+                        fontFamily: 'inherit'
+                      },
+                      '& .ql-editor': {
+                        minHeight: 300
+                      }
+                    }}
+                  >
+                    <ReactQuill
+                      theme="snow"
+                      value={form.content || ''}
+                      onChange={(val) => setForm((f) => ({ ...f, content: val }))}
+                      readOnly={!canWrite}
+                      modules={QUILL_MODULES}
+                      placeholder="Redacte el contenido del insight aqui..."
+                    />
+                  </Box>
+                </Box>
 
                 {form.powerbi_url && (
                   <Box>
