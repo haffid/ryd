@@ -23,6 +23,10 @@ import {
   Popper,
   Skeleton,
   useTheme,
+  Grow,
+  MenuList,
+  Drawer,
+  Collapse,
 } from '@mui/material'
 import {
   Search as SearchIcon,
@@ -33,6 +37,11 @@ import {
   Dashboard as DashboardIcon,
   Article as ArticleIcon,
   AccountTree as AccountTreeIcon,
+  KeyboardArrowDown as KeyboardArrowDownIcon,
+  KeyboardArrowRight as KeyboardArrowRightIcon,
+  Menu as MenuIcon,
+  ExpandLess,
+  ExpandMore,
 } from '@mui/icons-material'
 import { useAuth } from '../hooks/useAuth'
 import { usePermissions } from '../hooks/usePermissions'
@@ -66,6 +75,212 @@ function flattenPages(tree, arr = []) {
   return arr
 }
 
+function NavMenuItem({ page, level = 0, isActive }) {
+  const [open, setOpen] = useState(false)
+  const anchorRef = useRef(null)
+  const closeTimeout = useRef(null)
+  const navigate = useNavigate()
+
+  const children = (page.children || []).filter((c) => c.visibility === 'published')
+  const hasChildren = children.length > 0
+  const path = `/p/${page.slug}`
+  const active = isActive(path)
+
+  const handleMouseEnter = () => {
+    if (closeTimeout.current) clearTimeout(closeTimeout.current)
+    setOpen(true)
+  }
+
+  const handleMouseLeave = () => {
+    closeTimeout.current = setTimeout(() => {
+      setOpen(false)
+    }, 150)
+  }
+
+  const handleClick = (e) => {
+    e.stopPropagation()
+    navigate(path)
+    setOpen(false)
+  }
+
+  if (level === 0) {
+    return (
+      <Box
+        ref={anchorRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        sx={{ display: 'flex', alignItems: 'center', height: '100%' }}
+      >
+        <Box
+          component={Link}
+          to={path}
+          sx={{
+            px: 1.75,
+            py: 2.5,
+            fontSize: 14,
+            fontWeight: active ? 700 : 500,
+            color: active ? 'primary.main' : 'text.secondary',
+            borderBottom: '2px solid',
+            borderColor: active ? 'primary.main' : 'transparent',
+            textDecoration: 'none',
+            transition: 'all 0.15s',
+            whiteSpace: 'nowrap',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+            height: '100%',
+            boxSizing: 'border-box',
+            '&:hover': { color: 'primary.main' },
+          }}
+        >
+          {page.name}
+          {hasChildren && <KeyboardArrowDownIcon sx={{ fontSize: 16 }} />}
+        </Box>
+        {hasChildren && (
+          <Popper
+            open={open}
+            anchorEl={anchorRef.current}
+            placement="bottom-start"
+            transition
+            style={{ zIndex: 1300 }}
+          >
+            {({ TransitionProps }) => (
+              <Grow {...TransitionProps} timeout={200} style={{ transformOrigin: 'top left' }}>
+                <Paper elevation={4} sx={{ mt: 0, borderRadius: 1.5, overflow: 'hidden', minWidth: 200, py: 1 }}>
+                  <MenuList disablePadding>
+                    {children.map((child) => (
+                      <NavMenuItem key={child.id} page={child} level={level + 1} isActive={isActive} />
+                    ))}
+                  </MenuList>
+                </Paper>
+              </Grow>
+            )}
+          </Popper>
+        )}
+      </Box>
+    )
+  }
+
+  return (
+    <Box
+      ref={anchorRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      sx={{ position: 'relative' }}
+    >
+      <MenuItem
+        onClick={handleClick}
+        sx={{
+          py: 1,
+          px: 2,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          color: active ? 'primary.main' : 'text.primary',
+          bgcolor: active ? 'primary.50' : 'transparent',
+          fontWeight: active ? 600 : 400,
+          whiteSpace: 'normal',
+          minHeight: 'auto',
+          lineHeight: 1.3,
+          '&:hover': { bgcolor: 'action.hover', color: 'primary.main' },
+        }}
+      >
+        <Typography variant="body2" sx={{ fontWeight: 'inherit', flex: 1 }}>
+          {page.name}
+        </Typography>
+        {hasChildren && <KeyboardArrowRightIcon sx={{ fontSize: 18, ml: 1, color: 'text.secondary' }} />}
+      </MenuItem>
+      {hasChildren && (
+        <Popper
+          open={open}
+          anchorEl={anchorRef.current}
+          placement="right-start"
+          transition
+          style={{ zIndex: 1300 }}
+          modifiers={[
+            {
+              name: 'offset',
+              options: {
+                offset: [0, -8],
+              },
+            },
+          ]}
+        >
+          {({ TransitionProps }) => (
+            <Grow {...TransitionProps} timeout={200} style={{ transformOrigin: 'left top' }}>
+              <Paper elevation={4} sx={{ borderRadius: 1.5, overflow: 'hidden', minWidth: 200, py: 1 }}>
+                <MenuList disablePadding>
+                  {children.map((child) => (
+                    <NavMenuItem key={child.id} page={child} level={level + 1} isActive={isActive} />
+                  ))}
+                </MenuList>
+              </Paper>
+            </Grow>
+          )}
+        </Popper>
+      )}
+    </Box>
+  )
+}
+
+function MobileNavMenuItem({ page, level = 0, onClickOut, isActive }) {
+  const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
+
+  const children = (page.children || []).filter((c) => c.visibility === 'published')
+  const hasChildren = children.length > 0
+  const path = `/p/${page.slug}`
+  const active = isActive(path)
+
+  const handleToggle = (e) => {
+    e.stopPropagation()
+    setOpen((prev) => !prev)
+  }
+
+  const handleClick = (e) => {
+    e.stopPropagation()
+    navigate(path)
+    onClickOut() // Close the drawer
+  }
+
+  return (
+    <>
+      <ListItemButton onClick={hasChildren ? handleToggle : handleClick} sx={{ pl: 2 + level * 2 }}>
+        <ListItemText
+          primary={page.name}
+          primaryTypographyProps={{
+            variant: 'body2',
+            fontWeight: active ? 700 : 500,
+            color: active ? 'primary.main' : 'text.primary'
+          }}
+        />
+        {hasChildren ? (open ? <ExpandLess /> : <ExpandMore />) : null}
+      </ListItemButton>
+      {hasChildren && (
+        <Collapse in={open} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            <ListItemButton onClick={handleClick} sx={{ pl: 2 + (level + 1) * 2, bgcolor: 'action.hover' }}>
+              <ListItemText
+                primary="Ir a la página principal"
+                primaryTypographyProps={{ variant: 'caption', color: 'text.secondary' }}
+              />
+            </ListItemButton>
+            {children.map((child) => (
+              <MobileNavMenuItem
+                key={child.id}
+                page={child}
+                level={level + 1}
+                isActive={isActive}
+                onClickOut={onClickOut}
+              />
+            ))}
+          </List>
+        </Collapse>
+      )}
+    </>
+  )
+}
+
 export default function AppLayout() {
   const { user, logout } = useAuth()
   const { can } = usePermissions()
@@ -75,11 +290,14 @@ export default function AppLayout() {
   const location = useLocation()
   const [anchorEl, setAnchorEl] = useState(null)
 
+  // Mobile drawer state
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+
   // ── Dynamic page nav (loaded from API) ─────────────────────────────────
   const [navPages, setNavPages] = useState([])
   const [navLoading, setNavLoading] = useState(true)
 
-  useEffect(() => {
+  const fetchPages = useCallback(() => {
     setNavLoading(true)
     pagesService
       .list()
@@ -91,6 +309,12 @@ export default function AppLayout() {
       .catch(() => setNavPages([]))
       .finally(() => setNavLoading(false))
   }, [])
+
+  useEffect(() => {
+    fetchPages()
+    window.addEventListener('pages-updated', fetchPages)
+    return () => window.removeEventListener('pages-updated', fetchPages)
+  }, [fetchPages])
 
   // ── Search ──────────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('')
@@ -196,6 +420,19 @@ export default function AppLayout() {
         }}
       >
         <Toolbar sx={{ gap: 2, px: { xs: 2, md: 4 } }}>
+          {/* Mobile hamburger */}
+          <Box sx={{ display: { xs: 'flex', lg: 'none' }, mr: 1 }}>
+            <IconButton
+              size="large"
+              edge="start"
+              color="inherit"
+              aria-label="menu"
+              onClick={() => setMobileDrawerOpen(true)}
+            >
+              <MenuIcon />
+            </IconButton>
+          </Box>
+
           {/* Logo */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2, flexShrink: 0 }}>
             <Box
@@ -217,7 +454,7 @@ export default function AppLayout() {
           </Box>
 
           {/* ── Navigation ── */}
-          <Box sx={{ display: { xs: 'none', md: 'flex' }, flex: 1, alignItems: 'center', overflow: 'hidden' }}>
+          <Box sx={{ display: { xs: 'none', lg: 'flex' }, flex: 1, alignItems: 'center', overflow: 'hidden' }}>
 
             {/* Dynamic content pages */}
             {navLoading ? (
@@ -225,19 +462,9 @@ export default function AppLayout() {
                 <Skeleton key={i} variant="rounded" width={90} height={22} sx={{ mx: 1 }} />
               ))
             ) : (
-              navPages.map((page) => {
-                const path = `/p/${page.slug}`
-                return (
-                  <Box
-                    key={page.id}
-                    component={Link}
-                    to={path}
-                    sx={navLinkSx(isActive(path))}
-                  >
-                    {page.name}
-                  </Box>
-                )
-              })
+              navPages.map((page) => (
+                <NavMenuItem key={page.id} page={page} isActive={isActive} />
+              ))
             )}
 
             {/* Divider between content pages and admin tools */}
@@ -428,6 +655,59 @@ export default function AppLayout() {
           Cerrar sesión
         </MenuItem>
       </Menu>
+
+      {/* Mobile Drawer */}
+      <Drawer
+        anchor="left"
+        open={mobileDrawerOpen}
+        onClose={() => setMobileDrawerOpen(false)}
+        ModalProps={{ keepMounted: true }}
+        PaperProps={{ sx: { width: 280, bgcolor: 'background.paper' } }}
+      >
+        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ width: 32, height: 32, bgcolor: 'primary.main', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <DashboardIcon sx={{ color: '#fff', fontSize: 18 }} />
+          </Box>
+          <Typography variant="subtitle2" fontWeight={700}>
+            R&D
+          </Typography>
+        </Box>
+
+        <List sx={{ pt: 1, pb: 2, flex: 1, overflowY: 'auto' }}>
+          {navPages.map((page) => (
+            <MobileNavMenuItem
+              key={page.id}
+              page={page}
+              isActive={isActive}
+              onClickOut={() => setMobileDrawerOpen(false)}
+            />
+          ))}
+
+          {/* Admin tools in mobile drawer */}
+          {!navLoading && navPages.length > 0 && visibleAdminNav.length > 0 && (
+            <Divider sx={{ my: 1 }} />
+          )}
+          {visibleAdminNav.map((item) => {
+            const active = isActive(item.path)
+            return (
+              <ListItemButton
+                key={item.path}
+                onClick={() => { navigate(item.path); setMobileDrawerOpen(false); }}
+                sx={{ pl: 2 }}
+              >
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{
+                    variant: 'body2',
+                    fontWeight: active ? 700 : 500,
+                    color: active ? 'primary.main' : 'text.primary'
+                  }}
+                />
+              </ListItemButton>
+            )
+          })}
+        </List>
+      </Drawer>
 
       {/* Page content */}
       <Box component="main" sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>

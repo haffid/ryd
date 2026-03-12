@@ -208,9 +208,75 @@ function EditUrlDialog({ open, onClose, page, onSaved }) {
   )
 }
 
+/* ---------- Documents Panel ---------- */
+function DocumentsPanel({ documents, loading, selected, onSelect }) {
+  useEffect(() => {
+    if (documents.length > 0 && !selected) {
+      onSelect(documents[0])
+    }
+  }, [documents, selected, onSelect])
+
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        border: '1px solid', borderColor: 'divider', borderRadius: 2,
+        display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden',
+      }}
+    >
+      <Box
+        sx={{
+          px: 2.5, py: 1.75, borderBottom: '1px solid', borderColor: 'divider',
+          bgcolor: 'action.hover', display: 'flex', alignItems: 'center', gap: 1,
+        }}
+      >
+        <PdfIcon color="error" fontSize="small" />
+        <Typography variant="caption" fontWeight={700} letterSpacing={1} textTransform="uppercase">
+          DOCUMENTOS
+        </Typography>
+      </Box>
+
+      {loading ? (
+        <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {[1, 2, 3].map((i) => <Skeleton key={i} variant="rounded" height={56} />)}
+        </Box>
+      ) : documents.length === 0 ? (
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, p: 3, color: 'text.disabled' }}>
+          <PdfIcon sx={{ fontSize: 48, opacity: 0.3 }} />
+          <Typography variant="body2" textAlign="center">No hay documentos publicados</Typography>
+        </Box>
+      ) : (
+        <Box sx={{ flex: 1, overflowY: 'auto' }}>
+          {documents.map((doc) => (
+            <Box
+              key={doc.id}
+              onClick={() => onSelect(doc)}
+              sx={{
+                px: 2.5, py: 1.25, cursor: 'pointer', borderLeft: '3px solid',
+                borderColor: selected?.id === doc.id ? 'error.main' : 'transparent',
+                bgcolor: selected?.id === doc.id ? 'error.50' : 'transparent',
+                '&:hover': { bgcolor: 'action.hover' }, transition: 'all 0.15s',
+              }}
+            >
+              <Typography variant="body2" fontWeight={selected?.id === doc.id ? 700 : 500} noWrap
+                color={selected?.id === doc.id ? 'error.main' : 'text.primary'}>
+                {doc.title || doc.original_name}
+              </Typography>
+              <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.5 }} noWrap>
+                {doc.original_name}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      )}
+    </Paper>
+  )
+}
+
 /* ---------- Narrative layout (PDF viewer) ---------- */
-function NarrativeView({ currentPage, children, hasChildren, activeChildIdx, setActiveChildIdx, canWrite, navigate, isSubView }) {
-  const [document, setDocument] = useState(null)
+function NarrativeView({ currentPage, targetPage, canWrite, navigate, isSubView }) {
+  const [documents, setDocuments] = useState([])
+  const [selectedDocument, setSelectedDocument] = useState(null)
   const [loadingDoc, setLoadingDoc] = useState(true)
   const [uploadOpen, setUploadOpen] = useState(false)
   const [file, setFile] = useState(null)
@@ -218,25 +284,30 @@ function NarrativeView({ currentPage, children, hasChildren, activeChildIdx, set
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
-  const fileInputRef = useState(null)
-
-  const targetPage = hasChildren ? children[activeChildIdx] : currentPage
 
   useEffect(() => {
     setLoadingDoc(true)
-    documentsService.getByPage(targetPage.id)
-      .then((res) => setDocument(res.data))
-      .catch(() => setDocument(null))
+    documentsService.list({ page_id: targetPage.id })
+      .then((res) => {
+        const docs = res.data || []
+        setDocuments(docs)
+        if (docs.length > 0) {
+          setSelectedDocument(docs[0])
+        } else {
+          setSelectedDocument(null)
+        }
+      })
+      .catch(() => setDocuments([]))
       .finally(() => setLoadingDoc(false))
   }, [targetPage.id])
 
   useEffect(() => {
     if (uploadOpen) {
-      setTitle(document?.title || targetPage.name)
-      setDescription(document?.description || targetPage.description || '')
+      setTitle(targetPage.name)
+      setDescription(targetPage.description || '')
       setFile(null)
     }
-  }, [uploadOpen, document, targetPage])
+  }, [uploadOpen, targetPage])
 
   const handleDrop = (e) => {
     e.preventDefault()
@@ -246,25 +317,21 @@ function NarrativeView({ currentPage, children, hasChildren, activeChildIdx, set
   }
 
   const handleUpload = async () => {
-    if (!file && !document) return
+    if (!file) return
     setSaving(true)
     try {
       const fd = new FormData()
       fd.append('title', title.trim() || targetPage.name)
       fd.append('description', description.trim())
       fd.append('page_id', String(targetPage.id))
-      if (file) fd.append('file', file)
+      fd.append('file', file)
 
-      let res
-      if (document && !file) {
-        res = await documentsService.update(document.id, {
-          title: title.trim(),
-          description: description.trim() || null,
-        })
-      } else {
-        res = await documentsService.upload(fd)
-      }
-      setDocument(res.data)
+      const res = await documentsService.upload(fd)
+      const newDoc = res.data
+
+      // Append the new doc to the list and select it
+      setDocuments(prev => [newDoc, ...prev])
+      setSelectedDocument(newDoc)
       setUploadOpen(false)
     } catch {
       // ignore
@@ -273,7 +340,7 @@ function NarrativeView({ currentPage, children, hasChildren, activeChildIdx, set
     }
   }
 
-  const pdfUrl = document?.file_url || null
+  const pdfUrl = selectedDocument?.file_url || null
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -295,36 +362,15 @@ function NarrativeView({ currentPage, children, hasChildren, activeChildIdx, set
               )}
             </Box>
 
-            {hasChildren && (
-              <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'action.hover', borderRadius: 2, p: 0.5, gap: 0.5, flexWrap: 'wrap' }}>
-                {children.map((child, i) => (
-                  <Box key={child.id} sx={{ display: 'flex', alignItems: 'center' }}>
-                    <Button
-                      size="small"
-                      variant={activeChildIdx === i ? 'contained' : 'text'}
-                      onClick={() => setActiveChildIdx(i)}
-                      sx={{
-                        fontSize: 13, px: 2, py: 0.75, minWidth: 0,
-                        borderRadius: 1.5,
-                        color: activeChildIdx === i ? 'white' : 'text.secondary',
-                        boxShadow: activeChildIdx === i ? 2 : 0,
-                      }}
-                    >
-                      {child.name}
-                    </Button>
-                  </Box>
-                ))}
-              </Box>
-            )}
             {canWrite && (
-              <Tooltip title={document ? 'Actualizar documento' : 'Subir PDF'}>
+              <Tooltip title="Subir nuevo PDF">
                 <Button
                   variant="outlined"
                   size="small"
                   startIcon={<UploadIcon />}
                   onClick={() => setUploadOpen(true)}
                 >
-                  {document ? 'Actualizar PDF' : 'Subir PDF'}
+                  Subir PDF
                 </Button>
               </Tooltip>
             )}
@@ -332,66 +378,76 @@ function NarrativeView({ currentPage, children, hasChildren, activeChildIdx, set
         </Box>
       )}
 
-      {/* PDF viewer — full width */}
-      <Box sx={{ flex: 1, p: { xs: 1, md: 2 }, bgcolor: 'background.default', display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {loadingDoc ? (
-          <Skeleton variant="rectangular" sx={{ flex: 1, minHeight: 500, borderRadius: 2 }} />
-        ) : pdfUrl ? (
-          <Paper
-            elevation={0}
-            sx={{ flex: 1, border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
-          >
-            {/* PDF toolbar */}
-            <Box sx={{ px: 2, py: 1, bgcolor: 'action.hover', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <PdfIcon sx={{ color: 'error.main', fontSize: 18 }} />
-                <Typography variant="caption" fontWeight={600} color="text.secondary">
-                  {document?.original_name || document?.title}
-                </Typography>
+      {/* Master-Detail Layout for PDF viewer */}
+      <Box sx={{ flex: 1, p: { xs: 2, md: 3 }, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, overflow: 'hidden', bgcolor: 'background.default' }}>
+
+        {/* Left Side: Documents List */}
+        <Box sx={{ width: { md: '30%' }, minWidth: { md: 280 }, order: { xs: 1, md: 0 } }}>
+          <DocumentsPanel
+            documents={documents}
+            loading={loadingDoc}
+            selected={selectedDocument}
+            onSelect={setSelectedDocument}
+          />
+        </Box>
+
+        {/* Right Side: PDF Viewer */}
+        <Box sx={{ flex: 1, display: 'flex', order: { xs: 2, md: 1 }, minHeight: { xs: 500, md: 0 } }}>
+          {loadingDoc ? (
+            <Skeleton variant="rectangular" sx={{ flex: 1, borderRadius: 2 }} />
+          ) : pdfUrl ? (
+            <Paper
+              elevation={0}
+              sx={{ flex: 1, border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+            >
+              {/* PDF toolbar */}
+              <Box sx={{ px: 2, py: 1, bgcolor: 'action.hover', borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <PdfIcon sx={{ color: 'error.main', fontSize: 18 }} />
+                  <Typography variant="caption" fontWeight={600} color="text.secondary">
+                    {selectedDocument?.original_name || selectedDocument?.title}
+                  </Typography>
+                </Box>
+                <Tooltip title="Abrir en nueva pestaña">
+                  <IconButton size="small" href={pdfUrl} target="_blank" rel="noopener">
+                    <OpenInNewIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
               </Box>
-              <Tooltip title="Abrir en nueva pestaña">
-                <IconButton size="small" href={pdfUrl} target="_blank" rel="noopener">
-                  <OpenInNewIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            </Box>
-            {/* Iframe PDF viewer */}
-            <Box
-              component="iframe"
-              src={pdfUrl}
-              title={targetPage.name}
-              sx={{ flex: 1, border: 'none', width: '100%', minHeight: 500 }}
-            />
-          </Paper>
-        ) : (
-          <Box
-            sx={{
-              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-              justifyContent: 'center', gap: 2, minHeight: 400, color: 'text.disabled',
-              bgcolor: 'action.hover', borderRadius: 2, border: '2px dashed', borderColor: 'divider',
-            }}
-          >
-            <PdfIcon sx={{ fontSize: 72, opacity: 0.2 }} />
-            <Typography variant="h6" fontWeight={600}>Sin documento</Typography>
-            <Typography variant="body2" textAlign="center" maxWidth={320}>
-              {canWrite
-                ? `Sube un PDF para "${targetPage.name}" usando el botón "Subir PDF" en la parte superior.`
-                : 'El documento aún no ha sido configurado.'}
-            </Typography>
-            {canWrite && (
-              <Button variant="contained" startIcon={<UploadIcon />} onClick={() => setUploadOpen(true)}>
-                Subir PDF
-              </Button>
-            )}
-          </Box>
-        )}
+              {/* Iframe PDF viewer */}
+              <Box
+                component="iframe"
+                src={pdfUrl}
+                title={selectedDocument?.title || targetPage.name}
+                sx={{ flex: 1, border: 'none', width: '100%', minHeight: 500 }}
+              />
+            </Paper>
+          ) : (
+            <Paper
+              elevation={0}
+              sx={{
+                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+                justifyContent: 'center', gap: 2, color: 'text.disabled',
+                bgcolor: 'action.hover', borderRadius: 2, border: '1px dashed', borderColor: 'divider',
+              }}
+            >
+              <PdfIcon sx={{ fontSize: 72, opacity: 0.2 }} />
+              <Typography variant="h6" fontWeight={600}>Sin documento seleccionado</Typography>
+              <Typography variant="body2" textAlign="center" maxWidth={320}>
+                {canWrite
+                  ? `Sube un PDF para "${targetPage.name}" usando el botón superior para visualizarlo aquí.`
+                  : 'No hay documentos asignados a esta página.'}
+              </Typography>
+            </Paper>
+          )}
+        </Box>
       </Box>
 
       {/* Upload dialog */}
       <Dialog open={uploadOpen} onClose={() => setUploadOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <PdfIcon color="error" />
-          {document ? 'Actualizar documento' : 'Subir PDF'}
+          Subir PDF
         </DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '16px !important' }}>
           {/* Drop zone */}
@@ -420,16 +476,6 @@ function NarrativeView({ currentPage, children, hasChildren, activeChildIdx, set
                 <PdfIcon sx={{ fontSize: 32, color: 'success.main', mb: 0.5 }} />
                 <Typography variant="body2" fontWeight={600} color="success.main">{file.name}</Typography>
               </>
-            ) : document ? (
-              <>
-                <PdfIcon sx={{ fontSize: 32, color: 'text.disabled', mb: 0.5 }} />
-                <Typography variant="body2" color="text.secondary">
-                  Actual: <strong>{document.original_name}</strong>
-                </Typography>
-                <Typography variant="caption" color="text.disabled">
-                  Arrastra un nuevo PDF para reemplazarlo, o cierra para editar solo los datos.
-                </Typography>
-              </>
             ) : (
               <>
                 <UploadIcon sx={{ fontSize: 36, color: 'text.disabled', mb: 0.5 }} />
@@ -440,15 +486,15 @@ function NarrativeView({ currentPage, children, hasChildren, activeChildIdx, set
             )}
           </Box>
 
-          <TextField label="Título" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth size="small" />
-          <TextField label="Descripción" value={description} onChange={(e) => setDescription(e.target.value)}
+          <TextField label="Título del documento" value={title} onChange={(e) => setTitle(e.target.value)} fullWidth size="small" />
+          <TextField label="Descripción opcional" value={description} onChange={(e) => setDescription(e.target.value)}
             fullWidth size="small" multiline minRows={2} />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setUploadOpen(false)} disabled={saving}>Cancelar</Button>
-          <Button variant="contained" onClick={handleUpload} disabled={saving || (!file && !document)}
+          <Button variant="contained" onClick={handleUpload} disabled={saving || !file}
             startIcon={saving ? <CircularProgress size={14} /> : <UploadIcon />}>
-            {document ? 'Guardar cambios' : 'Subir PDF'}
+            Subir PDF
           </Button>
         </DialogActions>
       </Dialog>
@@ -498,13 +544,11 @@ export default function PageViewPage() {
   const [selectedInsight, setSelectedInsight] = useState(null)
   const [loadingPages, setLoadingPages] = useState(true)
   const [loadingInsights, setLoadingInsights] = useState(false)
-  const [activeChildIdx, setActiveChildIdx] = useState(0)
   const [editTarget, setEditTarget] = useState(null)
   const [editOpen, setEditOpen] = useState(false)
 
   useEffect(() => {
     setLoadingPages(true)
-    setActiveChildIdx(0)
     pagesService
       .list()
       .then((res) => setPageTree(res.data || []))
@@ -516,8 +560,7 @@ export default function PageViewPage() {
   const currentPage = allPages.find((p) => p.slug?.toLowerCase() === (slug || '').toLowerCase())
   const children = (currentPage?.children || []).filter((c) => c.visibility === 'published')
   const hasChildren = children.length > 0
-  const activeChild = hasChildren ? children[activeChildIdx] : null
-  const targetPage = activeChild || currentPage
+  const targetPage = currentPage
 
   const baseUrl = targetPage?.powerbi_url || currentPage?.powerbi_url || null
   const powerbiUrl = selectedInsight?.powerbi_url || baseUrl
@@ -579,37 +622,7 @@ export default function PageViewPage() {
             )}
           </Box>
 
-          {hasChildren && (
-            <Box sx={{ display: 'flex', alignItems: 'center', bgcolor: 'action.hover', borderRadius: 2, p: 0.5, gap: 0.5, flexWrap: 'wrap' }}>
-              {children.map((child, i) => (
-                <Box key={child.id} sx={{ display: 'flex', alignItems: 'center' }}>
-                  <Button
-                    size="small"
-                    variant={activeChildIdx === i ? 'contained' : 'text'}
-                    onClick={() => { setActiveChildIdx(i); setSelectedInsight(null) }}
-                    sx={{
-                      fontSize: 13, px: 2, py: 0.75, minWidth: 0,
-                      borderRadius: canWrite && activeChildIdx === i ? '6px 0 0 6px' : 1.5,
-                      color: activeChildIdx === i ? 'white' : 'text.secondary',
-                      boxShadow: activeChildIdx === i ? 2 : 0,
-                    }}
-                  >
-                    {child.name}
-                  </Button>
-                  {canWrite && activeChildIdx === i && (
-                    <Tooltip title="Configurar URL de Power BI">
-                      <IconButton size="small" onClick={() => { setEditTarget(child); setEditOpen(true) }}
-                        sx={{ bgcolor: 'primary.main', color: '#fff', borderRadius: '0 6px 6px 0', height: 32, width: 28, '&:hover': { bgcolor: 'primary.dark' } }}>
-                        <EditIcon sx={{ fontSize: 13 }} />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Box>
-              ))}
-            </Box>
-          )}
-
-          {!hasChildren && canWrite && targetPage.page_type !== 'folder' && (
+          {canWrite && targetPage.page_type !== 'folder' && (
             <Tooltip title={targetPage.page_type === 'narrative' ? 'Los documentos se suben desde la vista' : 'Configurar URL de Power BI'}>
               <IconButton size="small" onClick={() => { setEditTarget(currentPage); setEditOpen(true) }}
                 disabled={targetPage.page_type === 'narrative'}
@@ -625,10 +638,7 @@ export default function PageViewPage() {
       {targetPage.page_type === 'narrative' ? (
         <NarrativeView
           currentPage={currentPage}
-          children={children}
-          hasChildren={hasChildren}
-          activeChildIdx={activeChildIdx}
-          setActiveChildIdx={setActiveChildIdx}
+          targetPage={targetPage}
           canWrite={canWrite}
           navigate={navigate}
           isSubView={true}
@@ -642,7 +652,7 @@ export default function PageViewPage() {
           <Typography variant="body1" color="text.disabled" textAlign="center" maxWidth={400}>
             {!hasChildren
               ? 'Esta carpeta no tiene submenús asignados aún. Dirígete a "Estructura" para agregarle páginas.'
-              : 'Selecciona una de las pestañas en la parte superior para visualizar su contenido.'}
+              : 'Selecciona uno de los submenús en el menú superior para visualizar su contenido.'}
           </Typography>
         </Box>
       ) : (

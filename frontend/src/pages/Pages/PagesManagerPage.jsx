@@ -306,6 +306,7 @@ export default function PagesManagerPage() {
         await pagesService.update(selected.id, payload)
         notify('Pagina actualizada')
       }
+      window.dispatchEvent(new Event('pages-updated'))
       closeForm()
       loadData()
     } catch (err) {
@@ -319,6 +320,7 @@ export default function PagesManagerPage() {
     try {
       await pagesService.delete(deleteTarget.id)
       notify('Pagina eliminada')
+      window.dispatchEvent(new Event('pages-updated'))
       setDeleteTarget(null)
       if (selected?.id === deleteTarget.id) closeForm()
       loadData()

@@ -11,7 +11,10 @@ import {
   Chip,
   CircularProgress,
   Divider,
-  Drawer,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   FormControlLabel,
   FormGroup,
   IconButton,
@@ -36,8 +39,6 @@ import LockIcon from '@mui/icons-material/Lock'
 
 import { rolesService } from '../../services/usersService'
 import { usePermissions } from '../../hooks/usePermissions'
-
-const DRAWER_WIDTH = 440
 
 const ACTION_LABELS = {
   read: 'Ver',
@@ -313,157 +314,151 @@ export default function RolesPage() {
         </TableContainer>
       )}
 
-      {/* Edit / Create Drawer */}
-      <Drawer
-        anchor="right"
+      {/* Edit / Create Dialog */}
+      <Dialog
         open={drawerOpen}
         onClose={closeDrawer}
-        PaperProps={{ sx: { width: DRAWER_WIDTH, p: 0 } }}
+        fullWidth
+        maxWidth="sm"
+        scroll="paper"
       >
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            px: 3,
-            py: 2,
-            borderBottom: '1px solid',
-            borderColor: 'divider',
-          }}
-        >
+        <DialogTitle sx={{ m: 0, p: 2, display: 'flex', alignItems: 'center' }}>
           <Typography variant="h6" fontWeight={700} sx={{ flex: 1 }}>
             {editing ? `Editar: ${editing.display_name}` : 'Nuevo rol'}
           </Typography>
-          <IconButton onClick={closeDrawer}><CloseIcon /></IconButton>
-        </Box>
+          <IconButton onClick={closeDrawer} sx={{ ml: 1, color: 'text.secondary' }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
 
-        <Box sx={{ px: 3, py: 3, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2.5, flex: 1 }}>
-          <TextField
-            label="Nombre visible *"
-            fullWidth
-            size="small"
-            value={form.display_name}
-            onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))}
-            disabled={editing?.is_system}
-          />
-          {!editing && (
+        <DialogContent dividers sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
             <TextField
-              label="Identificador (slug) *"
+              label="Nombre visible *"
               fullWidth
               size="small"
-              value={form.name}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, name: e.target.value.toLowerCase().replace(/\s+/g, '_') }))
-              }
-              helperText="Ej: gerente_ventas — sin espacios, solo letras, números y guión bajo"
+              value={form.display_name}
+              onChange={(e) => setForm((f) => ({ ...f, display_name: e.target.value }))}
+              disabled={editing?.is_system}
             />
-          )}
-          <TextField
-            label="Descripción"
-            fullWidth
-            size="small"
-            multiline
-            rows={2}
-            value={form.description}
-            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-          />
+            {!editing && (
+              <TextField
+                label="Identificador (slug) *"
+                fullWidth
+                size="small"
+                value={form.name}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, name: e.target.value.toLowerCase().replace(/\s+/g, '_') }))
+                }
+                helperText="Ej: gerente_ventas — sin espacios, solo letras, números y guión bajo"
+              />
+            )}
+            <TextField
+              label="Descripción"
+              fullWidth
+              size="small"
+              multiline
+              rows={2}
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            />
 
-          <Divider />
+            <Divider />
 
-          <Typography variant="subtitle2" fontWeight={700}>
-            Permisos por módulo
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {form.permission_ids.length} permisos seleccionados
-            {editing?.is_system && ' — Los roles del sistema no deben modificarse.'}
-          </Typography>
+            <Typography variant="subtitle2" fontWeight={700}>
+              Permisos por módulo
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {form.permission_ids.length} permisos seleccionados
+              {editing?.is_system && ' — Los roles del sistema no deben modificarse.'}
+            </Typography>
 
-          {Object.entries(grouped).map(([module, perms]) => {
-            const allSelected = perms.every((p) => form.permission_ids.includes(p.id))
-            const someSelected = perms.some((p) => form.permission_ids.includes(p.id))
-            return (
-              <Paper
-                key={module}
-                elevation={0}
-                sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, overflow: 'hidden' }}
-              >
-                {/* Module header */}
-                <Box
-                  sx={{
-                    px: 2,
-                    py: 1,
-                    bgcolor: 'action.hover',
-                    borderBottom: '1px solid',
-                    borderColor: 'divider',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
+            {Object.entries(grouped).map(([module, perms]) => {
+              const allSelected = perms.every((p) => form.permission_ids.includes(p.id))
+              const someSelected = perms.some((p) => form.permission_ids.includes(p.id))
+              return (
+                <Paper
+                  key={module}
+                  elevation={0}
+                  sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, overflow: 'hidden' }}
                 >
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        size="small"
-                        checked={allSelected}
-                        indeterminate={someSelected && !allSelected}
-                        onChange={() => toggleModule(perms)}
-                        disabled={editing?.is_system}
-                      />
-                    }
-                    label={
-                      <Typography variant="subtitle2" fontWeight={700}>
-                        {MODULE_LABELS[module] || module}
-                      </Typography>
-                    }
-                  />
-                </Box>
-
-                {/* Permission checkboxes */}
-                <FormGroup sx={{ px: 2, py: 1 }}>
-                  {perms.map((perm) => (
+                  {/* Module header */}
+                  <Box
+                    sx={{
+                      px: 2,
+                      py: 1,
+                      bgcolor: 'action.hover',
+                      borderBottom: '1px solid',
+                      borderColor: 'divider',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
                     <FormControlLabel
-                      key={perm.id}
                       control={
                         <Checkbox
                           size="small"
-                          checked={form.permission_ids.includes(perm.id)}
-                          onChange={() => togglePerm(perm.id)}
+                          checked={allSelected}
+                          indeterminate={someSelected && !allSelected}
+                          onChange={() => toggleModule(perms)}
                           disabled={editing?.is_system}
                         />
                       }
                       label={
-                        <Box>
-                          <Typography variant="body2">
-                            {ACTION_LABELS[perm.action] || perm.action}
-                          </Typography>
-                          {perm.description && (
-                            <Typography variant="caption" color="text.secondary">
-                              {perm.description}
-                            </Typography>
-                          )}
-                        </Box>
+                        <Typography variant="subtitle2" fontWeight={700}>
+                          {MODULE_LABELS[module] || module}
+                        </Typography>
                       }
                     />
-                  ))}
-                </FormGroup>
-              </Paper>
-            )
-          })}
+                  </Box>
 
-          <Divider />
-
-          <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'flex-end' }}>
-            <Button variant="outlined" onClick={closeDrawer} disabled={saving}>
-              Cancelar
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleSave}
-              disabled={saving || editing?.is_system}
-            >
-              {saving ? <CircularProgress size={18} /> : editing ? 'Guardar cambios' : 'Crear rol'}
-            </Button>
+                  {/* Permission checkboxes */}
+                  <FormGroup sx={{ px: 2, py: 1 }}>
+                    {perms.map((perm) => (
+                      <FormControlLabel
+                        key={perm.id}
+                        control={
+                          <Checkbox
+                            size="small"
+                            checked={form.permission_ids.includes(perm.id)}
+                            onChange={() => togglePerm(perm.id)}
+                            disabled={editing?.is_system}
+                          />
+                        }
+                        label={
+                          <Box>
+                            <Typography variant="body2">
+                              {ACTION_LABELS[perm.action] || perm.action}
+                            </Typography>
+                            {perm.description && (
+                              <Typography variant="caption" color="text.secondary">
+                                {perm.description}
+                              </Typography>
+                            )}
+                          </Box>
+                        }
+                      />
+                    ))}
+                  </FormGroup>
+                </Paper>
+              )
+            })}
           </Box>
-        </Box>
-      </Drawer>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2.5, bgcolor: 'background.default' }}>
+          <Button variant="outlined" onClick={closeDrawer} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={saving || editing?.is_system}
+          >
+            {saving ? <CircularProgress size={18} /> : editing ? 'Guardar cambios' : 'Crear rol'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Delete confirmation */}
       {confirmDelete && (
@@ -494,7 +489,8 @@ export default function RolesPage() {
             </Button>
           </Box>
         </Paper>
-      )}
+      )
+      }
 
       <Snackbar
         open={snack.open}
@@ -506,6 +502,6 @@ export default function RolesPage() {
           {snack.msg}
         </Alert>
       </Snackbar>
-    </Box>
+    </Box >
   )
 }
