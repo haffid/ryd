@@ -29,6 +29,7 @@ import {
   Upload as UploadIcon,
   Folder as FolderIcon,
   Dashboard as DashboardIcon,
+  TableView as TableViewIcon,
 } from '@mui/icons-material'
 import { pagesService } from '../../services/pagesService'
 import { insightsService } from '../../services/insightsService'
@@ -188,14 +189,14 @@ function EditUrlDialog({ open, onClose, page, onSaved }) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <LinkIcon color="primary" />URL de Power BI — {page?.name}
+        <LinkIcon color="primary" />URL de origen — {page?.name}
       </DialogTitle>
       <DialogContent>
-        <TextField autoFocus fullWidth label="URL de Power BI"
-          placeholder="https://app.powerbi.com/reportEmbed?..."
+        <TextField autoFocus fullWidth label="URL del reporte o documento"
+          placeholder="https://app.powerbi.com/... o https://onedrive.live.com/..."
           value={url} onChange={(e) => setUrl(e.target.value)}
           multiline minRows={3} sx={{ mt: 1 }}
-          helperText="Pega la URL embed de Power BI. Déjala vacía para ocultar el panel." />
+          helperText="Pega la URL de Power BI, Excel u origen de datos. Déjala vacía para ocultar el panel." />
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onClose} disabled={saving}>Cancelar</Button>
@@ -503,27 +504,45 @@ function NarrativeView({ currentPage, targetPage, canWrite, navigate, isSubView 
 }
 
 /* ---------- Dashboard layout (Power BI + Insights) ---------- */
-function DashboardView({ targetPage, currentPage, powerbiUrl, insights, loadingInsights, selectedInsight, setSelectedInsight, canWrite, navigate }) {
+function DashboardView({ targetPage, currentPage, powerbiUrl, insights, loadingInsights, selectedInsight, setSelectedInsight, canWrite, navigate, insightsOpen }) {
   return (
-    <Box sx={{ flex: 1, p: { xs: 2, md: 3 }, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, overflow: 'hidden', bgcolor: 'background.default' }}>
-      <Box sx={{ width: { md: '30%' }, minWidth: { md: 280 }, order: { xs: 1, md: 0 } }}>
-        <InsightsPanel
-          insights={insights} loading={loadingInsights}
-          onOpenEditor={canWrite ? () => navigate('/insights') : null}
-          selected={selectedInsight} onSelect={setSelectedInsight}
-        />
-      </Box>
-      <Box sx={{ flex: 1, display: 'flex', order: { xs: 2, md: 1 }, minHeight: { xs: 400, md: 0 } }}>
+    <Box sx={{ flex: 1, p: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, overflow: 'hidden', bgcolor: 'background.default' }}>
+      {insightsOpen && (
+        <Box sx={{ width: { xs: '100%', md: 450 }, flexShrink: 0, order: { xs: 2, md: 1 } }}>
+          <InsightsPanel
+            insights={insights} loading={loadingInsights}
+            onOpenEditor={canWrite ? () => navigate('/insights') : null}
+            selected={selectedInsight} onSelect={setSelectedInsight}
+          />
+        </Box>
+      )}
+      <Box sx={{ flex: 1, display: 'flex', order: { xs: 1, md: 2 }, minHeight: { xs: 600, md: 0 }, minWidth: 0 }}>
         <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {powerbiUrl ? (
-            <Box component="iframe" src={powerbiUrl} title={targetPage?.name || currentPage.name}
-              sx={{ flex: 1, border: 'none', width: '100%', minHeight: 400 }} allowFullScreen />
+            <Box sx={{ flex: 1, overflow: 'hidden', position: 'relative', width: '100%', minHeight: 400 }}>
+              <Box
+                component="iframe"
+                src={powerbiUrl}
+                title={targetPage?.name || currentPage.name}
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '125%',
+                  height: '125%',
+                  border: 'none',
+                  transform: 'scale(0.8)',
+                  transformOrigin: 'top left',
+                }}
+                allowFullScreen
+              />
+            </Box>
           ) : (
             <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 1.5, minHeight: 400, color: 'text.disabled', bgcolor: 'action.hover' }}>
               <TrendingUpIcon sx={{ fontSize: 64, opacity: 0.2 }} />
-              <Typography variant="h6" fontWeight={600}>Tablero Power BI</Typography>
+              <Typography variant="h6" fontWeight={600}>Visualizador de datos</Typography>
               <Typography variant="body2" textAlign="center" maxWidth={320}>
-                {canWrite ? `Configure la URL de Power BI usando el botón ✏ junto a "${targetPage?.name || currentPage.name}".` : 'El tablero aún no está configurado.'}
+                {canWrite ? `Configure la URL usando el botón ✏ junto a "${targetPage?.name || currentPage.name}".` : 'El tablero o documento aún no está configurado.'}
               </Typography>
             </Box>
           )}
@@ -546,6 +565,7 @@ export default function PageViewPage() {
   const [loadingInsights, setLoadingInsights] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
   const [editOpen, setEditOpen] = useState(false)
+  const [insightsOpen, setInsightsOpen] = useState(true)
 
   useEffect(() => {
     setLoadingPages(true)
@@ -602,8 +622,9 @@ export default function PageViewPage() {
   }
 
   const pageIcon = targetPage?.page_type === 'narrative' ? <PdfIcon color="error" fontSize="small" />
-    : targetPage?.page_type === 'folder' ? <FolderIcon color="primary" fontSize="small" />
-      : <DashboardIcon color="primary" fontSize="small" />
+    : targetPage?.page_type === 'excel' ? <TableViewIcon color="success" fontSize="small" />
+      : targetPage?.page_type === 'folder' ? <FolderIcon color="primary" fontSize="small" />
+        : <DashboardIcon color="primary" fontSize="small" />
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -622,15 +643,35 @@ export default function PageViewPage() {
             )}
           </Box>
 
-          {canWrite && targetPage.page_type !== 'folder' && (
-            <Tooltip title={targetPage.page_type === 'narrative' ? 'Los documentos se suben desde la vista' : 'Configurar URL de Power BI'}>
-              <IconButton size="small" onClick={() => { setEditTarget(currentPage); setEditOpen(true) }}
-                disabled={targetPage.page_type === 'narrative'}
-                sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
-                <EditIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {targetPage.page_type !== 'folder' && targetPage.page_type !== 'narrative' && (
+              <Tooltip title={insightsOpen ? "Ocultar panel de insights" : "Ver panel de insights"}>
+                <IconButton
+                  size="small"
+                  onClick={() => setInsightsOpen(!insightsOpen)}
+                  sx={{
+                    color: insightsOpen ? 'primary.main' : 'text.secondary',
+                    bgcolor: insightsOpen ? 'primary.50' : 'transparent',
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1.5
+                  }}
+                >
+                  <LightbulbIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+
+            {canWrite && targetPage.page_type !== 'folder' && (
+              <Tooltip title={targetPage.page_type === 'narrative' ? 'Los documentos se suben desde la vista' : 'Configurar URL del origen de datos'}>
+                <IconButton size="small" onClick={() => { setEditTarget(currentPage); setEditOpen(true) }}
+                  disabled={targetPage.page_type === 'narrative'}
+                  sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
         </Box>
       </Box>
 
@@ -666,6 +707,7 @@ export default function PageViewPage() {
           setSelectedInsight={setSelectedInsight}
           canWrite={canWrite}
           navigate={navigate}
+          insightsOpen={insightsOpen}
         />
       )}
 

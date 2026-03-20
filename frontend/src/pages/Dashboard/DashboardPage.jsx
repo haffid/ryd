@@ -225,13 +225,24 @@ function PowerBIPanel({ url, loading }) {
       {loading ? (
         <Skeleton variant="rectangular" sx={{ flex: 1, minHeight: 400 }} />
       ) : url ? (
-        <Box
-          component="iframe"
-          src={url}
-          title="Power BI Dashboard"
-          sx={{ flex: 1, border: 'none', width: '100%', minHeight: 400 }}
-          allowFullScreen
-        />
+        <Box sx={{ flex: 1, overflow: 'hidden', position: 'relative', width: '100%', minHeight: 400 }}>
+          <Box
+            component="iframe"
+            src={url}
+            title="Power BI Dashboard"
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '125%',
+              height: '125%',
+              border: 'none',
+              transform: 'scale(0.8)',
+              transformOrigin: 'top left',
+            }}
+            allowFullScreen
+          />
+        </Box>
       ) : (
         <Box
           sx={{
@@ -248,10 +259,10 @@ function PowerBIPanel({ url, loading }) {
         >
           <TrendingUpIcon sx={{ fontSize: 64, opacity: 0.2 }} />
           <Typography variant="h6" fontWeight={600}>
-            Tablero Power BI
+            Vista de Datos
           </Typography>
           <Typography variant="body2" textAlign="center" maxWidth={320}>
-            Configure la URL de Power BI para esta categoría usando el botón de edición junto a la pestaña activa.
+            Configure la URL de origen de datos para esta categoría usando el botón de edición junto a la pestaña activa.
           </Typography>
         </Box>
       )}
@@ -330,6 +341,7 @@ export default function DashboardPage() {
   const [loadingMeta, setLoadingMeta] = useState(true)
   const [loadingInsights, setLoadingInsights] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [insightsOpen, setInsightsOpen] = useState(true)
 
   // Load categories once
   useEffect(() => {
@@ -467,6 +479,24 @@ export default function DashboardPage() {
                 </Box>
               ))
             )}
+
+            {!loadingMeta && (
+              <>
+                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, my: 0.5 }} />
+                <Tooltip title={insightsOpen ? "Ocultar panel de insights" : "Ver panel de insights"}>
+                  <IconButton
+                    size="small"
+                    onClick={() => setInsightsOpen(!insightsOpen)}
+                    sx={{
+                      color: insightsOpen ? 'primary.main' : 'text.secondary',
+                      bgcolor: insightsOpen ? 'primary.50' : 'transparent',
+                    }}
+                  >
+                    <LightbulbIcon sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Tooltip>
+              </>
+            )}
           </Box>
         </Box>
       </Box>
@@ -475,28 +505,36 @@ export default function DashboardPage() {
       <Box
         sx={{
           flex: 1,
-          p: { xs: 2, md: 3 },
+          p: { xs: 1.5, md: 2 },
           display: 'flex',
           flexDirection: { xs: 'column', md: 'row' },
-          gap: 3,
+          gap: 2,
           overflow: 'hidden',
           bgcolor: 'background.default',
         }}
       >
-        {/* Insights panel — 30% on desktop */}
-        <Box sx={{ width: { md: '30%' }, minWidth: { md: 280 }, order: { xs: 1, md: 0 } }}>
-          <InsightsPanel
-            insights={insights}
-            loading={loadingInsights}
-            categoryName={currentCategory?.name || ''}
-            onOpenEditor={can('insights', 'write') ? () => navigate('/insights') : null}
-            selected={selectedInsight}
-            onSelect={setSelectedInsight}
-          />
-        </Box>
+        {/* Insights panel */}
+        {insightsOpen && (
+          <Box
+            sx={{
+              width: { xs: '100%', md: 350 },
+              flexShrink: 0,
+              order: { xs: 2, md: 1 }
+            }}
+          >
+            <InsightsPanel
+              insights={insights}
+              loading={loadingInsights}
+              categoryName={currentCategory?.name || ''}
+              onOpenEditor={can('insights', 'write') ? () => navigate('/insights') : null}
+              selected={selectedInsight}
+              onSelect={setSelectedInsight}
+            />
+          </Box>
+        )}
 
-        {/* Power BI panel — 70% on desktop */}
-        <Box sx={{ flex: 1, display: 'flex', order: { xs: 2, md: 1 }, minHeight: { xs: 400, md: 0 } }}>
+        {/* Power BI panel */}
+        <Box sx={{ flex: 1, display: 'flex', order: { xs: 1, md: 2 }, minHeight: { xs: 600, md: 0 }, minWidth: 0 }}>
           <PowerBIPanel url={powerbiUrl} loading={loadingMeta} />
         </Box>
       </Box>

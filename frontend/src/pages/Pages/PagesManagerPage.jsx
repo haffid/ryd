@@ -35,6 +35,7 @@ import ArticleIcon from '@mui/icons-material/Article'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import LinkIcon from '@mui/icons-material/Link'
 import FolderIcon from '@mui/icons-material/Folder'
+import TableViewIcon from '@mui/icons-material/TableView'
 
 import { pagesService } from '../../services/pagesService'
 import { rolesService } from '../../services/usersService'
@@ -43,6 +44,7 @@ import { usePermissions } from '../../hooks/usePermissions'
 const PAGE_TYPE_LABELS = {
   dashboard: 'Power BI',
   narrative: 'Documento (PDF)',
+  excel: 'Excel (URL)',
   external: 'Externo',
   folder: 'Carpeta (Agrupador)',
 }
@@ -50,6 +52,7 @@ const PAGE_TYPE_LABELS = {
 const PAGE_TYPE_ICONS = {
   dashboard: <DashboardIcon fontSize="small" />,
   narrative: <ArticleIcon fontSize="small" />,
+  excel: <TableViewIcon fontSize="small" />,
   external: <LinkIcon fontSize="small" />,
   folder: <FolderIcon fontSize="small" />,
 }
@@ -509,14 +512,14 @@ export default function PagesManagerPage() {
                   </Select>
                 </FormControl>
 
-                {(form.page_type === 'dashboard' || form.page_type === 'external') && (
+                {(form.page_type === 'dashboard' || form.page_type === 'excel' || form.page_type === 'external') && (
                   <TextField
-                    label="URL de Power BI / Externo"
+                    label="URL de Power BI / Excel / Externo"
                     fullWidth
                     size="small"
                     value={form.powerbi_url}
                     onChange={handleChange('powerbi_url')}
-                    helperText="URL embed del reporte o link externo"
+                    helperText="URL embed del reporte, excel o link externo"
                   />
                 )}
 

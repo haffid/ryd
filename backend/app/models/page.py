@@ -9,6 +9,7 @@ from ..core.database import Base
 class PageType(str, enum.Enum):
     dashboard = "dashboard"
     narrative = "narrative"
+    excel = "excel"
     external = "external"
     folder = "folder"
 
