@@ -3,6 +3,7 @@ import PrivateRoute from './PrivateRoute'
 import AppLayout from '../layouts/AppLayout'
 import AuthLayout from '../layouts/AuthLayout'
 
+import HomePage from '../pages/Home/HomePage'
 import LoginPage from '../pages/Login/LoginPage'
 import DashboardPage from '../pages/Dashboard/DashboardPage'
 import PageViewPage from '../pages/PageView/PageViewPage'
@@ -29,7 +30,8 @@ export default function AppRouter() {
           </PrivateRoute>
         }
       >
-        <Route index element={<Navigate to="/p/inicio" replace />} />
+        <Route index element={<Navigate to="/inicio" replace />} />
+        <Route path="/inicio" element={<HomePage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         {/* Dynamic page view — driven by pages from Estructura */}
         <Route path="/p/:slug" element={<PageViewPage />} />

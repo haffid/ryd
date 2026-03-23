@@ -18,7 +18,7 @@ from .models import (  # noqa: F401 — import all models so SQLAlchemy register
     Document,
 )
 from .core.database import Base
-from .routers import auth, categories, documents, insights, pages, roles, users
+from .routers import auth, categories, documents, insights, pages, roles, users, banguat
 
 Base.metadata.create_all(bind=engine)
 
@@ -49,6 +49,7 @@ app.include_router(pages.router, prefix=_PREFIX)
 app.include_router(insights.router, prefix=_PREFIX)
 app.include_router(categories.router, prefix=_PREFIX)
 app.include_router(documents.router, prefix=_PREFIX)
+app.include_router(banguat.router, prefix=_PREFIX)
 
 
 @app.get("/api/v1/health", tags=["health"])

@@ -23,6 +23,7 @@ import {
   Login as LoginIcon,
 } from '@mui/icons-material'
 import { useAuth } from '../../hooks/useAuth'
+import LogoLogin from '../../image/logo login.png'
 
 // Microsoft logo SVG
 function MicrosoftLogo() {
@@ -41,7 +42,7 @@ export default function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = location.state?.from?.pathname || '/p/inicio'
+  const from = location.state?.from?.pathname || '/inicio'
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -99,36 +100,13 @@ export default function LoginPage() {
       <Box sx={{ position: 'relative', width: '100%', maxWidth: 440 }}>
         {/* Branding */}
         <Box sx={{ textAlign: 'center', mb: 4 }}>
-          <Box
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 1.5,
-              mb: 3,
-            }}
-          >
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                bgcolor: 'primary.main',
-                borderRadius: 1.5,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <svg width="22" height="22" fill="white" viewBox="0 0 48 48">
-                <path d="M36.7273 44C33.9891 44 31.6043 39.8386 30.3636 33.69C29.123 39.8386 26.7382 44 24 44C21.2618 44 18.877 39.8386 17.6364 33.69C16.3957 39.8386 14.0109 44 11.2727 44C7.25611 44 4 35.0457 4 24C4 12.9543 7.25611 4 11.2727 4C14.0109 4 16.3957 8.16144 17.6364 14.31C18.877 8.16144 21.2618 4 24 4C26.7382 4 29.123 8.16144 30.3636 14.31C31.6043 8.16144 33.9891 4 36.7273 4C40.7439 4 44 12.9543 44 24C44 35.0457 40.7439 44 36.7273 44Z" />
-              </svg>
-            </Box>
-            <Typography variant="h6" fontWeight={700}>
-              Research & Development
-            </Typography>
+          <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
+            <img 
+              src={LogoLogin} 
+              alt="Research & Development Logo" 
+              style={{ width: '85%', maxWidth: 360, height: 'auto', objectFit: 'contain' }} 
+            />
           </Box>
-          <Typography variant="h4" fontWeight={800} gutterBottom>
-            Iniciar Sesión
-          </Typography>
           <Typography variant="body2" color="text.secondary">
             Ingresa con tu Usuario y Contraseña.
           </Typography>

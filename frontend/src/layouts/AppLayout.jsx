@@ -48,6 +48,7 @@ import { usePermissions } from '../hooks/usePermissions'
 import { useThemeMode } from '../context/ThemeContext'
 import { insightsService } from '../services/insightsService'
 import { pagesService } from '../services/pagesService'
+import LogoNav from '../image/logo nav.png'
 
 // Fixed admin-only nav items — labels never change
 const ADMIN_NAV = [
@@ -83,7 +84,7 @@ function NavMenuItem({ page, level = 0, isActive }) {
 
   const children = (page.children || []).filter((c) => c.visibility === 'published')
   const hasChildren = children.length > 0
-  const path = `/p/${page.slug}`
+  const path = page.slug === 'inicio' ? '/inicio' : `/p/${page.slug}`
   const active = isActive(path)
 
   const handleMouseEnter = () => {
@@ -109,7 +110,7 @@ function NavMenuItem({ page, level = 0, isActive }) {
         ref={anchorRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        sx={{ display: 'flex', alignItems: 'center', height: '100%' }}
+        sx={{ display: 'flex', alignItems: 'center', height: '100%', flexShrink: 0 }}
       >
         <Box
           component={Link}
@@ -229,7 +230,7 @@ function MobileNavMenuItem({ page, level = 0, onClickOut, isActive }) {
 
   const children = (page.children || []).filter((c) => c.visibility === 'published')
   const hasChildren = children.length > 0
-  const path = `/p/${page.slug}`
+  const path = page.slug === 'inicio' ? '/inicio' : `/p/${page.slug}`
   const active = isActive(path)
 
   const handleToggle = (e) => {
@@ -281,6 +282,141 @@ function MobileNavMenuItem({ page, level = 0, onClickOut, isActive }) {
   )
 }
 
+function AdminNavMenu({ items, isActive }) {
+  const [open, setOpen] = useState(false)
+  const anchorRef = useRef(null)
+  const closeTimeout = useRef(null)
+
+  const handleMouseEnter = () => {
+    if (closeTimeout.current) clearTimeout(closeTimeout.current)
+    setOpen(true)
+  }
+
+  const handleMouseLeave = () => {
+    closeTimeout.current = setTimeout(() => {
+      setOpen(false)
+    }, 150)
+  }
+
+  const active = items.some(item => isActive(item.path))
+
+  return (
+    <Box
+      ref={anchorRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      sx={{ display: 'flex', alignItems: 'center', height: '100%', flexShrink: 0 }}
+    >
+      <Box
+        sx={{
+          px: 1.75,
+          py: 2.5,
+          fontSize: 14,
+          fontWeight: active ? 700 : 500,
+          color: active ? 'primary.main' : 'text.secondary',
+          borderBottom: '2px solid',
+          borderColor: active ? 'primary.main' : 'transparent',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.5,
+          height: '100%',
+          boxSizing: 'border-box',
+          transition: 'color 0.15s',
+          whiteSpace: 'nowrap',
+          '&:hover': { color: 'primary.main' },
+        }}
+      >
+        Admin
+        <KeyboardArrowDownIcon sx={{ fontSize: 16 }} />
+      </Box>
+      <Popper
+        open={open}
+        anchorEl={anchorRef.current}
+        placement="bottom-start"
+        transition
+        style={{ zIndex: 1300 }}
+      >
+        {({ TransitionProps }) => (
+          <Grow {...TransitionProps} timeout={200} style={{ transformOrigin: 'top left' }}>
+            <Paper elevation={4} sx={{ mt: 0, borderRadius: 1.5, overflow: 'hidden', minWidth: 200, py: 1 }}>
+              <MenuList disablePadding>
+                {items.map((item) => {
+                  const itemActive = isActive(item.path)
+                  return (
+                    <MenuItem
+                      key={item.path}
+                      component={Link}
+                      to={item.path}
+                      onClick={() => setOpen(false)}
+                      sx={{
+                        py: 1,
+                        px: 2,
+                        color: itemActive ? 'primary.main' : 'text.primary',
+                        bgcolor: itemActive ? 'primary.50' : 'transparent',
+                        fontWeight: itemActive ? 600 : 400,
+                        '&:hover': { bgcolor: 'action.hover', color: 'primary.main' },
+                      }}
+                    >
+                      {item.label}
+                    </MenuItem>
+                  )
+                })}
+              </MenuList>
+            </Paper>
+          </Grow>
+        )}
+      </Popper>
+    </Box>
+  )
+}
+
+function MobileAdminNavMenu({ items, isActive, onClickOut }) {
+  const [open, setOpen] = useState(false)
+  const active = items.some(item => isActive(item.path))
+  
+  return (
+    <>
+      <ListItemButton onClick={() => setOpen(!open)} sx={{ pl: 2 }}>
+        <ListItemText
+          primary="Admin"
+          primaryTypographyProps={{
+            variant: 'body2',
+            fontWeight: active ? 700 : 500,
+            color: active ? 'primary.main' : 'text.primary'
+          }}
+        />
+        {open ? <ExpandLess /> : <ExpandMore />}
+      </ListItemButton>
+      <Collapse in={open} timeout="auto" unmountOnExit>
+        <List component="div" disablePadding>
+          {items.map((item) => {
+            const itemActive = isActive(item.path)
+            return (
+              <ListItemButton
+                key={item.path}
+                component={Link}
+                to={item.path}
+                onClick={onClickOut}
+                sx={{ pl: 4 }}
+              >
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{
+                    variant: 'body2',
+                    fontWeight: itemActive ? 700 : 500,
+                    color: itemActive ? 'primary.main' : 'text.primary'
+                  }}
+                />
+              </ListItemButton>
+            )
+          })}
+        </List>
+      </Collapse>
+    </>
+  )
+}
+
 export default function AppLayout() {
   const { user, logout } = useAuth()
   const { can } = usePermissions()
@@ -321,6 +457,7 @@ export default function AppLayout() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [searching, setSearching] = useState(false)
   const [searchResults, setSearchResults] = useState({ insights: [], pages: [] })
+  const [searchExpanded, setSearchExpanded] = useState(false)
   const searchBoxRef = useRef(null)
   const cachedInsights = useRef(null)
   const cachedPages = useRef(null)
@@ -373,10 +510,16 @@ export default function AppLayout() {
     setSearchOpen(false)
     setSearchQuery('')
     setSearchResults({ insights: [], pages: [] })
+    setSearchExpanded(false)
   }
   const handleResultClick = (type, item) => {
     handleSearchClose()
-    navigate(type === 'insight' ? '/insights' : `/p/${item.slug}`)
+    
+    if (type === 'insight') {
+      navigate('/insights')
+    } else {
+      navigate(item.slug === 'inicio' ? '/inicio' : `/p/${item.slug}`)
+    }
   }
 
   const handleLogout = async () => {
@@ -421,7 +564,7 @@ export default function AppLayout() {
       >
         <Toolbar sx={{ gap: 2, px: { xs: 2, md: 4 } }}>
           {/* Mobile hamburger */}
-          <Box sx={{ display: { xs: 'flex', lg: 'none' }, mr: 1 }}>
+          <Box sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }}>
             <IconButton
               size="large"
               edge="start"
@@ -434,27 +577,23 @@ export default function AppLayout() {
           </Box>
 
           {/* Logo */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2, flexShrink: 0 }}>
-            <Box
-              sx={{
-                width: 36,
-                height: 36,
-                bgcolor: 'primary.main',
-                borderRadius: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <DashboardIcon sx={{ color: '#fff', fontSize: 20 }} />
-            </Box>
-            <Typography variant="subtitle1" fontWeight={700} noWrap>
-              Research & Development
-            </Typography>
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', mr: 2, flexShrink: 0 }}>
+            <img 
+              src={LogoNav} 
+              alt="Research & Development Logo" 
+              style={{ height: 40, width: 'auto', objectFit: 'contain' }} 
+            />
           </Box>
 
           {/* ── Navigation ── */}
-          <Box sx={{ display: { xs: 'none', lg: 'flex' }, flex: 1, alignItems: 'center', overflow: 'hidden' }}>
+          <Box sx={{ 
+            display: { xs: 'none', md: 'flex' }, 
+            flex: 1, 
+            alignItems: 'center', 
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            '&::-webkit-scrollbar': { display: 'none' }
+          }}>
 
             {/* Dynamic content pages */}
             {navLoading ? (
@@ -473,49 +612,66 @@ export default function AppLayout() {
             )}
 
             {/* Admin tool pages */}
-            {visibleAdminNav.map((item) => (
-              <Box
-                key={item.path}
-                component={Link}
-                to={item.path}
-                sx={navLinkSx(isActive(item.path))}
-              >
-                {item.label}
-              </Box>
-            ))}
+            {visibleAdminNav.length > 0 && (
+              <AdminNavMenu items={visibleAdminNav} isActive={isActive} />
+            )}
           </Box>
 
-          {/* Search */}
-          <ClickAwayListener onClickAway={handleSearchClose}>
-            <Box ref={searchBoxRef} sx={{ position: 'relative', display: { xs: 'none', sm: 'flex' }, flexShrink: 0 }}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  bgcolor: searchOpen ? 'action.selected' : 'action.hover',
-                  border: '1px solid',
-                  borderColor: searchOpen ? 'primary.main' : 'transparent',
-                  borderRadius: 2,
-                  px: 1.5,
-                  py: 0.5,
-                  gap: 1,
-                  transition: 'all 0.15s',
-                }}
-              >
-                {searching ? (
-                  <CircularProgress size={16} sx={{ color: 'text.disabled' }} />
-                ) : (
-                  <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-                )}
-                <InputBase
-                  placeholder="Buscar insights, páginas..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={handleSearchFocus}
-                  sx={{ fontSize: 14, width: 200 }}
-                  inputProps={{ 'aria-label': 'buscar' }}
-                />
-              </Box>
+            {/* Search */}
+            <ClickAwayListener onClickAway={handleSearchClose}>
+              <Box ref={searchBoxRef} sx={{ position: 'relative', display: { xs: 'none', sm: 'flex' }, flexShrink: 0 }}>
+                <Box
+                  onClick={() => {
+                    if (!searchExpanded) {
+                      setSearchExpanded(true)
+                      setTimeout(() => document.getElementById('global-search-input')?.focus(), 50)
+                    }
+                  }}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    bgcolor: (searchOpen || searchExpanded) ? 'action.selected' : 'transparent',
+                    border: '1px solid',
+                    borderColor: searchOpen ? 'primary.main' : 'transparent',
+                    borderRadius: 20,
+                    px: searchExpanded ? 1.5 : 1,
+                    py: searchExpanded ? 0.5 : 1,
+                    gap: searchExpanded ? 1 : 0,
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    width: searchExpanded ? 260 : 40,
+                    height: 40,
+                    justifyContent: searchExpanded ? 'flex-start' : 'center',
+                    cursor: searchExpanded ? 'default' : 'pointer',
+                    '&:hover': {
+                      bgcolor: 'action.hover',
+                    }
+                  }}
+                >
+                  {searching ? (
+                    <CircularProgress size={16} sx={{ color: 'text.disabled' }} />
+                  ) : (
+                    <SearchIcon sx={{ fontSize: 20, color: searchExpanded ? 'text.secondary' : 'text.primary' }} />
+                  )}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flex: 1, 
+                    opacity: searchExpanded ? 1 : 0, 
+                    width: searchExpanded ? 'auto' : 0,
+                    overflow: 'hidden',
+                    transition: 'opacity 0.2s ease',
+                    transitionDelay: searchExpanded ? '0.1s' : '0s'
+                  }}>
+                    <InputBase
+                      id="global-search-input"
+                      placeholder="Buscar insights, páginas..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onFocus={handleSearchFocus}
+                      sx={{ fontSize: 14, width: '100%' }}
+                      inputProps={{ 'aria-label': 'buscar' }}
+                    />
+                  </Box>
+                </Box>
 
               <Popper
                 open={searchOpen && (hasResults || (searchQuery.length > 0 && !searching))}
@@ -664,13 +820,12 @@ export default function AppLayout() {
         ModalProps={{ keepMounted: true }}
         PaperProps={{ sx: { width: 280, bgcolor: 'background.paper' } }}
       >
-        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Box sx={{ width: 32, height: 32, bgcolor: 'primary.main', borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <DashboardIcon sx={{ color: '#fff', fontSize: 18 }} />
-          </Box>
-          <Typography variant="subtitle2" fontWeight={700}>
-            R&D
-          </Typography>
+        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <img 
+            src={LogoNav} 
+            alt="Research & Development Logo" 
+            style={{ height: 32, width: 'auto', objectFit: 'contain' }} 
+          />
         </Box>
 
         <List sx={{ pt: 1, pb: 2, flex: 1, overflowY: 'auto' }}>
@@ -687,25 +842,13 @@ export default function AppLayout() {
           {!navLoading && navPages.length > 0 && visibleAdminNav.length > 0 && (
             <Divider sx={{ my: 1 }} />
           )}
-          {visibleAdminNav.map((item) => {
-            const active = isActive(item.path)
-            return (
-              <ListItemButton
-                key={item.path}
-                onClick={() => { navigate(item.path); setMobileDrawerOpen(false); }}
-                sx={{ pl: 2 }}
-              >
-                <ListItemText
-                  primary={item.label}
-                  primaryTypographyProps={{
-                    variant: 'body2',
-                    fontWeight: active ? 700 : 500,
-                    color: active ? 'primary.main' : 'text.primary'
-                  }}
-                />
-              </ListItemButton>
-            )
-          })}
+          {visibleAdminNav.length > 0 && (
+            <MobileAdminNavMenu 
+              items={visibleAdminNav} 
+              isActive={isActive} 
+              onClickOut={() => setMobileDrawerOpen(false)} 
+            />
+          )}
         </List>
       </Drawer>
 
